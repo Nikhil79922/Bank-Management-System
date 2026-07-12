@@ -56,4 +56,13 @@ public class Transaction {
                 ", created_at=" + created_at +
                 '}';
     }
+
+    public String toFileString() {
+        return transactionId + "," +
+                accountId + "," +
+                amount + "," +
+                transactionType + "," +
+                note + "," +
+                created_at;
+    }
 }

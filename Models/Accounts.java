@@ -20,11 +20,22 @@ public class Accounts {
         this.accountId = accountId;
         this.userId = userId;
         this.accountType = accountType;
-        this.active = active;
         this.balance = balance;
+        this.active = active;
         this.interest = interest;
-        this.suspicious=false;
         this.created_at = created_at;
+        this.suspicious=false;
+    }
+
+    public Accounts(int accountId , int userId , String accountType, double balance , boolean active , double interest , LocalDateTime created_at , boolean suspicious ){
+        this.accountId = accountId;
+        this.userId = userId;
+        this.accountType = accountType;
+        this.balance = balance;
+        this.active = active;
+        this.interest = interest;
+        this.created_at = created_at;
+        this.suspicious=suspicious;
     }
 
 
@@ -62,9 +73,9 @@ public class Accounts {
     }
 
     //setter
-    public void setAccountType(String accountType) {
-        this.accountType = accountType;
-    }
+        public void setAccountType(String accountType) {
+            this.accountType = accountType;
+        }
 
     public void setActive(boolean active) {
         this.active = active;
@@ -88,8 +99,16 @@ public class Accounts {
         this.suspicious = suspicious;
     }
 
-    public void setCreated_at(LocalDateTime created_at) {
-        this.created_at = created_at;
+
+    public String toFileString() {
+        return accountId + "," +
+                userId + "," +
+                accountType + "," +
+                balance + "," +
+                active + "," +
+                interest + "," +
+                created_at + "," +
+                suspicious;
     }
 
     @Override

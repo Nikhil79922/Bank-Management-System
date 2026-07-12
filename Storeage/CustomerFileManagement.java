@@ -3,12 +3,12 @@ import Projects.BankManagement.Models.Customer;
 
 import java.io.*;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import static Projects.BankManagement.Utils.Constants.CUSTOMER_FIELDS;
 import static Projects.BankManagement.Utils.Constants.CUSTOMER_FILE;
 
-public class FileManagment {
+public class CustomerFileManagement {
 
     public static Map<Integer,Customer> loadCustomers() {
         try ( BufferedReader fsread = new BufferedReader(new FileReader(CUSTOMER_FILE));){
@@ -23,7 +23,7 @@ public class FileManagment {
 
                 String[] data = line.split(",");
 
-                if (data.length != 4) {
+                if (data.length != CUSTOMER_FIELDS) {
                     continue;
                 }
                 int customerId = Integer.parseInt(data[0]);
