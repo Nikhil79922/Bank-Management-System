@@ -27,7 +27,7 @@ public class FraudDetectionService {
         return account;
     }
 
-    public void scanAccounts() {
+    public void scanAccounts() throws NotfoundException {
 
         System.out.println("\n========== FRAUD SCAN STARTED ==========");
 
@@ -82,7 +82,7 @@ public class FraudDetectionService {
             }
 
             if (!suspicious && recentTransactions > 5) {
-
+                markSuspicious(account.getAccountId());
                 suspicious = true;
 
                 System.out.println("⚠ Too many transactions detected.");
@@ -91,7 +91,7 @@ public class FraudDetectionService {
             }
 
             if (suspicious) {
-                account.setSuspicious(true);
+
                 suspiciousCount++;
             } else {
                 System.out.println("No suspicious activity detected.");
@@ -126,25 +126,33 @@ public class FraudDetectionService {
         System.out.println("===============================================\n");
     }
 
-    public void clearSuspicious(int accountId) throws NotfoundException {
+    public void clearExpiredSuspicion() {
 
-        System.out.println("\n========== CLEAR SUSPICIOUS STATUS ==========");
+        System.out.println("\n========== CLEARING SUSPICIOUS FLAGS ==========");
 
         Map<Integer, Accounts> accounts = loadAccounts();
-        Accounts account = findAccount(accounts, accountId);
 
-        if (!account.isSuspicious()) {
-            System.out.println("Account is not marked as suspicious.");
-            return;
+        int cleared = 0;
+
+        for (Accounts account : accounts.values()) {
+
+            if (account.isSuspicious()) {
+
+                // Dummy logic for now.
+                // Later you can replace this with a timestamp-based rule.
+                account.setSuspicious(false);
+
+                System.out.println("Cleared suspicious flag for Account : "
+                        + account.getAccountId());
+
+                cleared++;
+            }
         }
 
-        account.setSuspicious(false);
         saveAllAccount(accounts);
 
-        System.out.println("Account ID : " + accountId);
-        System.out.println("Status     : Active");
-        System.out.println("Suspicious flag removed successfully.");
-        System.out.println("=============================================\n");
+        System.out.println("Total Accounts Cleared : " + cleared);
+        System.out.println("===============================================\n");
     }
 
     public boolean isSuspicious(int accountId) throws NotfoundException {
