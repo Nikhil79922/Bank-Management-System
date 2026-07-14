@@ -8,11 +8,13 @@ import Projects.BankManagement.Models.Accounts;
 import Projects.BankManagement.Models.CreditTransaction;
 import Projects.BankManagement.Models.DebitTransaction;
 import Projects.BankManagement.Models.Transaction;
+import Projects.BankManagement.Utils.LockManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static Projects.BankManagement.Storeage.AccountFileManagement.loadAccounts;
 import static Projects.BankManagement.Storeage.AccountFileManagement.saveAllAccount;
@@ -65,6 +67,11 @@ public class TransactionService {
                     "Withdrawal amount must be greater than zero.");
         }
 
+        //Lock
+        ReentrantLock lock = LockManager.getAccountLock(accountId);
+        lock.lock();
+        try{
+
         Map<Integer, Accounts> accounts = loadAccounts();
 
         Accounts account = findAccount(accounts, accountId);
@@ -97,6 +104,9 @@ public class TransactionService {
         System.out.println("Amount          : " + amount);
         System.out.println("Updated Balance : " + updatedBalance);
         System.out.println("=================================\n");
+}finally {
+            lock.unlock();
+}
     }
 
     public void deposit(int accountId, double amount, String note)
@@ -112,7 +122,10 @@ public class TransactionService {
             throw new InvalidAmountException(
                     "Deposit amount must be greater than zero.");
         }
-
+        //Lock
+        ReentrantLock lock = LockManager.getAccountLock(accountId);
+        lock.lock();
+        try{
         Map<Integer, Accounts> accounts = loadAccounts();
 
         Accounts account = findAccount(accounts, accountId);
@@ -140,7 +153,10 @@ public class TransactionService {
         System.out.println("Amount          : " + amount);
         System.out.println("Updated Balance : " + updatedBalance);
         System.out.println("=============================\n");
-    }
+        }finally {
+            lock.unlock();
+        }
+        }
 
     public void transferMoney(int fromAccountId,
                               int toAccountId,
@@ -163,7 +179,16 @@ public class TransactionService {
             throw new InvalidAmountException(
                     "Source and destination accounts cannot be the same.");
         }
+        //Lock
+        int first = Math.min(fromAccountId,toAccountId);
+        int second = Math.max(fromAccountId,toAccountId);
 
+        ReentrantLock firstLock = LockManager.getAccountLock(first);
+        firstLock.lock();
+
+        ReentrantLock secondLock = LockManager.getAccountLock(second);
+        secondLock.lock();
+        try{
         Map<Integer, Accounts> accounts = loadAccounts();
 
         Accounts fromAccount = findAccount(accounts, fromAccountId);
@@ -214,50 +239,58 @@ public class TransactionService {
         System.out.println("Sender Balance  : " + updatedSenderBalance);
         System.out.println("Receiver Balance: " + updatedReceiverBalance);
         System.out.println("=====================================\n");
+        }finally {
+            secondLock.unlock();
+            firstLock.unlock();
+        }
     }
+
+
+
 
     public List<Transaction> getTransactionHistory(int accountId)
             throws NotfoundException, InvalidStatusException {
 
-        System.out.println("========== Transaction History ==========");
-        System.out.println("Fetching transaction history...");
+            System.out.println("========== Transaction History ==========");
+            System.out.println("Fetching transaction history...");
 
-        Map<Integer, Accounts> accounts = loadAccounts();
+            Map<Integer, Accounts> accounts = loadAccounts();
 
-        Accounts account = findAccount(accounts, accountId);
+            Accounts account = findAccount(accounts, accountId);
 
-        validateAccount(account);
+            validateAccount(account);
 
-        Map<Integer, Transaction> transactions = loadTransactions();
+            Map<Integer, Transaction> transactions = loadTransactions();
 
-        List<Transaction> history = new ArrayList<>();
+            List<Transaction> history = new ArrayList<>();
 
-        for (Transaction transaction : transactions.values()) {
+            for (Transaction transaction : transactions.values()) {
 
-            if (transaction.getAccountId() == accountId) {
-                history.add(transaction);
-            }
-        }
-
-        if (history.isEmpty()) {
-            System.out.println("No transaction history found.");
-            System.out.println("Account ID : " + accountId);
-        } else {
-            System.out.println("Transaction history fetched successfully.");
-            System.out.println("Account ID          : " + accountId);
-            System.out.println("Total Transactions  : " + history.size());
-
-            System.out.println("-----------------------------------------");
-
-            for (Transaction transaction : history) {
-                System.out.println(transaction);
+                if (transaction.getAccountId() == accountId) {
+                    history.add(transaction);
+                }
             }
 
-            System.out.println("-----------------------------------------");
-        }
+            if (history.isEmpty()) {
+                System.out.println("No transaction history found.");
+                System.out.println("Account ID : " + accountId);
+            } else {
+                System.out.println("Transaction history fetched successfully.");
+                System.out.println("Account ID          : " + accountId);
+                System.out.println("Total Transactions  : " + history.size());
 
-        System.out.println("=========================================\n");
+                System.out.println("-----------------------------------------");
 
-        return history;
+                for (Transaction transaction : history) {
+                    System.out.println(transaction);
+                }
+
+                System.out.println("-----------------------------------------");
+            }
+
+            System.out.println("=========================================\n");
+
+            return history;
     }
+
 }

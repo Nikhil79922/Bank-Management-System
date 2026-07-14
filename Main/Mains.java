@@ -14,18 +14,19 @@ import Projects.BankManagement.Services.DashboardService;
 import Projects.BankManagement.Services.FraudDetectionService;
 import Projects.BankManagement.Services.InterestService;
 import Projects.BankManagement.Services.TransactionService;
-import Projects.BankManagement.Task.BackupTask;
-import Projects.BankManagement.Task.ClearSuspicionTask;
-import Projects.BankManagement.Task.DashboardTask;
-import Projects.BankManagement.Task.FraudDetectionTask;
-import Projects.BankManagement.Task.InterestTask;
+import Projects.BankManagement.Task.*;
+import Projects.BankManagement.Utils.IdGenerator;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static Projects.BankManagement.Storeage.AccountFileManagement.loadAccounts;
+import static Projects.BankManagement.Storeage.CustomerFileManagement.loadCustomers;
+import static Projects.BankManagement.Storeage.TransactionFileManagement.loadTransactions;
 import static Projects.BankManagement.Utils.Constants.*;
 
 public class Mains {
@@ -44,7 +45,12 @@ public class Mains {
     // Background scheduler
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
+    // Executor Pool
+    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+
     public static void main(String[] args) {
+
+        initializeIdGenerator();
 
         startBackgroundTasks();
 
@@ -224,20 +230,20 @@ public class Mains {
                     int id = readInt("Enter Account ID: ");
                     double amount = readDouble("Enter Amount: ");
                     String note = readString("Enter Note: ");
-                    transactionService.deposit(id, amount, note);
+                    executor.submit(new DepositTransactionTask(transactionService , id , amount , note));
                 }
                 case 2 -> {
                     int id = readInt("Enter Account ID: ");
                     double amount = readDouble("Enter Amount: ");
                     String note = readString("Enter Note: ");
-                    transactionService.withdraw(id, amount, note);
+                    executor.submit(new withDrawTransactionTask(transactionService , id , amount , note));
                 }
                 case 3 -> {
                     int fromId = readInt("Enter From Account ID: ");
                     int toId = readInt("Enter To Account ID: ");
                     double amount = readDouble("Enter Amount: ");
                     String note = readString("Enter Note: ");
-                    transactionService.transferMoney(fromId, toId, amount, note);
+                    executor.submit(new TransferTransactionTask(transactionService , fromId, toId, amount, note));
                 }
                 case 4 -> {
                     int id = readInt("Enter Account ID: ");
@@ -251,8 +257,7 @@ public class Mains {
                 }
                 default -> System.out.println("Invalid choice.\n");
             }
-        } catch (NotfoundException | InvalidAmountException
-                 | InsufficientBalanceException | InvalidStatusException e) {
+        } catch (NotfoundException | InvalidStatusException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
@@ -325,13 +330,20 @@ public class Mains {
         System.out.println("\nShutting down background tasks...");
 
         scheduler.shutdown();
+        executor.shutdown();
 
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow();
             }
+
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
         } catch (InterruptedException e) {
             scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+            executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
 
@@ -379,5 +391,42 @@ public class Mains {
     private static String readString(String prompt) {
         System.out.print(prompt);
         return scanner.nextLine().trim();
+    }
+
+    private static void initializeIdGenerator() {
+
+        int lastCustomerId = 0;
+        int lastAccountId = 0;
+        int lastTransactionId = 0;
+
+        for (Customer customer : loadCustomers().values()) {
+            lastCustomerId = Math.max(
+                    lastCustomerId,
+                    customer.getCustomerId());
+        }
+
+        for (Accounts account : loadAccounts().values()) {
+            lastAccountId = Math.max(
+                    lastAccountId,
+                    account.getAccountId());
+        }
+
+        for (Transaction transaction : loadTransactions().values()) {
+            lastTransactionId = Math.max(
+                    lastTransactionId,
+                    transaction.getTransactionId());
+        }
+
+        IdGenerator.initialize(
+                lastCustomerId,
+                lastAccountId,
+                lastTransactionId
+        );
+
+        System.out.println("\n========== ID GENERATOR INITIALIZED ==========");
+        System.out.println("Last Customer ID    : " + lastCustomerId);
+        System.out.println("Last Account ID     : " + lastAccountId);
+        System.out.println("Last Transaction ID : " + lastTransactionId);
+        System.out.println("==============================================\n");
     }
 }
